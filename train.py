@@ -179,7 +179,7 @@ def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
 
                 print("test loss: {}:\t{:.9f}".format(iteration, val_loss))
                 if with_tensorboard and rank == 0:
-                    logger.add_scalar('test_loss', val_loss, j + len(test_loader) * epoch)
+                    logger.add_scalar('test_loss', val_loss, i + len(train_loader) * epoch)
 
             if iteration % iters_per_checkpoint == 0 and rank == 0:
                 checkpoint_path = "{}/waveglow_{}".format(output_directory, iteration)
