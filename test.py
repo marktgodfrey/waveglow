@@ -109,4 +109,4 @@ if __name__ == "__main__":
 
     torch.backends.cudnn.enabled = True
     torch.backends.cudnn.benchmark = False
-    test(**train_config)
+    test(train_config['sigma'], train_config['batch_size'], train_config['seed'], train_config['checkpoint_path'])
