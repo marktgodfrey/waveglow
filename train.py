@@ -150,7 +150,7 @@ def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
             if with_tensorboard and rank == 0:
                 logger.add_scalar('training_loss', reduced_loss, i + len(train_loader) * epoch)
 
-            if rank == 0:
+            if iteration % iters_per_checkpoint == 0 and rank == 0:
                 with torch.no_grad():
                     testset = Mel2Samp(data_config['testing_files'],
                                        data_config['segment_length'],
@@ -190,7 +190,6 @@ def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
                     if with_tensorboard and rank == 0:
                         logger.add_scalar('test_loss', val_loss, i + len(train_loader) * epoch)
 
-            if iteration % iters_per_checkpoint == 0 and rank == 0:
                 checkpoint_path = "{}/waveglow_{}".format(output_directory, iteration)
                 save_checkpoint(model, optimizer, learning_rate, iteration, checkpoint_path)
 
