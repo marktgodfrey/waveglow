@@ -90,7 +90,15 @@ def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
                                                       optimizer)
         iteration += 1  # next iteration is iteration + 1
 
-    trainset = Mel2Samp(**data_config)
+    trainset = Mel2Samp(data_config['training_files'],
+                        data_config['segment_length'],
+                        data_config['filter_length'],
+                        data_config['hop_length'],
+                        data_config['win_length'],
+                        data_config['sampling_rate'],
+                        data_config['mel_fmin'],
+                        data_config['mel_fmax'])
+
     # =====START: ADDED FOR DISTRIBUTED======
     train_sampler = DistributedSampler(trainset) if num_gpus > 1 else None
     # =====END:   ADDED FOR DISTRIBUTED======
