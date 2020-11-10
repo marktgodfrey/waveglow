@@ -152,6 +152,7 @@ def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
 
             if iteration % iters_per_checkpoint == 0 and rank == 0:
                 with torch.no_grad():
+                    print("validation {}:".format(iteration))
                     testset = Mel2Samp(data_config['testing_files'],
                                        data_config['segment_length'],
                                        data_config['filter_length'],
@@ -171,8 +172,8 @@ def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
 
                     model.eval()
                     val_loss = 0.0
-                    for j, batch in enumerate(test_loader):
-                        mel, audio = batch
+                    for j, test_batch in enumerate(test_loader):
+                        mel, audio = test_batch
                         mel = torch.autograd.Variable(mel.cuda())
                         audio = torch.autograd.Variable(audio.cuda())
                         outputs = model((mel, audio))
@@ -186,7 +187,7 @@ def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
                     val_loss = val_loss / (j + 1)
                     model.train()
 
-                    print("test loss: {}:\t{:.9f}".format(iteration, val_loss))
+                    print("val loss: {}:\t{:.9f}".format(iteration, val_loss))
                     if with_tensorboard and rank == 0:
                         logger.add_scalar('test_loss', val_loss, i + len(train_loader) * epoch)
 
