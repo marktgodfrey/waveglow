@@ -65,8 +65,8 @@ class Mel2Samp(torch.utils.data.Dataset):
     def __init__(self, training_files, segment_length, filter_length,
                  hop_length, win_length, sampling_rate, mel_fmin, mel_fmax, debug=False):
         self.audio_files = files_to_list(training_files)
-        random.seed(1234)
-        random.shuffle(self.audio_files)
+        # random.seed(1234)
+        # random.shuffle(self.audio_files)
         self.stft = TacotronSTFT(filter_length=filter_length,
                                  hop_length=hop_length,
                                  win_length=win_length,
