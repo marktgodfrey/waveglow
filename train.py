@@ -97,7 +97,7 @@ def validate(model, criterion, testset, iteration, batch_size, num_gpus, logger)
                 reduced_val_loss = loss.item()
             val_loss += reduced_val_loss
             print("\tval batch done, {} of {}: {:.9f}".format(j + 1, len(test_loader), reduced_val_loss))
-        val_loss = val_loss / (j + 1)
+        val_loss = val_loss / len(test_loader)
         print("val loss: {}:\t{:.9f}".format(iteration, val_loss))
         if logger:
             logger.add_scalar('test_loss', val_loss, iteration)
