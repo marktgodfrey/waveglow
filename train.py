@@ -167,7 +167,8 @@ def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
 
             is_overflow = False
             if fp16_run:
-                is_overflow = math.isnan(amp.master_params(optimizer))
+                grad_norm = torch.nn.utils.clip_grad_norm_(amp.master_params(optimizer), 1.0)
+                is_overflow = math.isnan(grad_norm)
 
             optimizer.step()
 
