@@ -97,7 +97,8 @@ def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
                         data_config['win_length'],
                         data_config['sampling_rate'],
                         data_config['mel_fmin'],
-                        data_config['mel_fmax'])
+                        data_config['mel_fmax'],
+                        debug=True)
 
     # =====START: ADDED FOR DISTRIBUTED======
     train_sampler = DistributedSampler(trainset) if num_gpus > 1 else None
@@ -108,8 +109,7 @@ def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
                               sampler=train_sampler,
                               batch_size=batch_size,
                               pin_memory=False,
-                              drop_last=True,
-                              debug=True)
+                              drop_last=True)
 
     # Get shared output_directory ready
     if rank == 0:
