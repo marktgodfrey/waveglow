@@ -62,24 +62,25 @@ def save_checkpoint(model, optimizer, learning_rate, iteration, filepath):
 
 
 def validate(model, criterion, testset, iteration, batch_size, num_gpus, logger):
-    test_sampler = DistributedSampler(testset) if num_gpus > 1 else None
-    test_loader = DataLoader(testset,
-                             num_workers=1,
-                             shuffle=False,
-                             sampler=test_sampler,
-                             batch_size=batch_size,
-                             pin_memory=False,
-                             drop_last=True)
-
-    # # why is this necessary??
-    # for j, test_batch in enumerate(test_loader):
-    #     print("\twtfbatch loaded, {} of {}".format(j + 1, len(test_loader)))
-    #     mel, audio = test_batch
-    #     print("\twtfbatch done, {} of {}: {} {}".format(j + 1, len(test_loader), mel.size(), audio.size()))
-
+    model.eval()
     with torch.no_grad():
         print("validation {}:".format(iteration))
-        model.eval()
+
+        test_sampler = DistributedSampler(testset) if num_gpus > 1 else None
+        test_loader = DataLoader(testset,
+                                 num_workers=1,
+                                 shuffle=False,
+                                 sampler=test_sampler,
+                                 batch_size=batch_size,
+                                 pin_memory=False,
+                                 drop_last=True)
+
+        # # why is this necessary??
+        # for j, test_batch in enumerate(test_loader):
+        #     print("\twtfbatch loaded, {} of {}".format(j + 1, len(test_loader)))
+        #     mel, audio = test_batch
+        #     print("\twtfbatch done, {} of {}: {} {}".format(j + 1, len(test_loader), mel.size(), audio.size()))
+
         val_loss = 0.0
         for j, test_batch in enumerate(test_loader):
             print("\tval batch loaded, {} of {}".format(j + 1, len(test_loader)))
@@ -96,11 +97,11 @@ def validate(model, criterion, testset, iteration, batch_size, num_gpus, logger)
             val_loss += reduced_val_loss
             print("\tval batch done, {} of {}: {:.9f}".format(j + 1, len(test_loader), reduced_val_loss))
         val_loss = val_loss / (j + 1)
-        model.train()
-
         print("val loss: {}:\t{:.9f}".format(iteration, val_loss))
         if logger:
             logger.add_scalar('test_loss', val_loss, iteration)
+    model.train()
+
 
 
 def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
@@ -215,7 +216,7 @@ def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
 
             print("train batch done, {} ({} of {}): {:.9f}".format(iteration, i, len(train_loader), reduced_loss))
 
-            if with_tensorboard and rank == 0:
+            if logger:
                 logger.add_scalar('training_loss', reduced_loss, i + len(train_loader) * epoch)
 
             if testset and not is_overflow and (iteration % iters_per_checkpoint == 0):
