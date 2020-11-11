@@ -27,6 +27,7 @@
 import argparse
 import json
 import os
+import math
 import torch
 
 #=====START: ADDED FOR DISTRIBUTED======
@@ -164,13 +165,17 @@ def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
             else:
                 loss.backward()
 
+            is_overflow = False
+            if fp16_run:
+                is_overflow = math.isnan(amp.master_params(optimizer))
+
             optimizer.step()
 
             print("{}:\t{:.9f}".format(iteration, reduced_loss))
             if with_tensorboard and rank == 0:
                 logger.add_scalar('training_loss', reduced_loss, i + len(train_loader) * epoch)
 
-            if iteration % iters_per_checkpoint == 0 and rank == 0:
+            if not is_overflow and (iteration % iters_per_checkpoint == 0):
                 with torch.no_grad():
                     print("validation {}:".format(iteration))
                     model.eval()
@@ -188,7 +193,7 @@ def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
                         else:
                             reduced_val_loss = loss.item()
                         val_loss += reduced_val_loss
-                        print("\t {}: {:.9f}".format(j, reduced_val_loss))
+                        print("\tbatch done, {} of {}: {:.9f}".format(j+1, len(test_loader), reduced_val_loss))
                     val_loss = val_loss / (j + 1)
                     model.train()
 
@@ -196,8 +201,9 @@ def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
                     if with_tensorboard and rank == 0:
                         logger.add_scalar('test_loss', val_loss, i + len(train_loader) * epoch)
 
-                checkpoint_path = "{}/waveglow_{}".format(output_directory, iteration)
-                save_checkpoint(model, optimizer, learning_rate, iteration, checkpoint_path)
+                if rank == 0:
+                    checkpoint_path = "{}/waveglow_{}".format(output_directory, iteration)
+                    save_checkpoint(model, optimizer, learning_rate, iteration, checkpoint_path)
 
             iteration += 1
 
