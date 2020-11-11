@@ -158,33 +158,33 @@ def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
                 logger.add_scalar('training_loss', reduced_loss, i + len(train_loader) * epoch)
 
             if not is_overflow and (iteration % iters_per_checkpoint == 0):
+
+                testset = Mel2Samp(data_config['testing_files'],
+                                   data_config['segment_length'],
+                                   data_config['filter_length'],
+                                   data_config['hop_length'],
+                                   data_config['win_length'],
+                                   data_config['sampling_rate'],
+                                   data_config['mel_fmin'],
+                                   data_config['mel_fmax'],
+                                   debug=True)
+                test_sampler = DistributedSampler(testset) if num_gpus > 1 else None
+                test_loader = DataLoader(testset,
+                                         num_workers=1,
+                                         shuffle=False,
+                                         sampler=test_sampler,
+                                         batch_size=batch_size,
+                                         pin_memory=False,
+                                         drop_last=True)
+
+                # why is this necessary??
+                for j, test_batch in enumerate(test_loader):
+                    print("\tbatch loaded, {} of {}".format(j + 1, len(test_loader)))
+                    mel, audio = test_batch
+                    print("\tbatch done, {} of {}: {} {}".format(j + 1, len(test_loader), mel.size(), audio.size()))
+
                 with torch.no_grad():
                     print("validation {}:".format(iteration))
-
-                    testset = Mel2Samp(data_config['testing_files'],
-                                       data_config['segment_length'],
-                                       data_config['filter_length'],
-                                       data_config['hop_length'],
-                                       data_config['win_length'],
-                                       data_config['sampling_rate'],
-                                       data_config['mel_fmin'],
-                                       data_config['mel_fmax'],
-                                       debug=True)
-                    test_sampler = DistributedSampler(testset) if num_gpus > 1 else None
-                    test_loader = DataLoader(testset,
-                                             num_workers=1,
-                                             shuffle=False,
-                                             sampler=test_sampler,
-                                             batch_size=1,
-                                             pin_memory=False,
-                                             drop_last=True)
-
-                    # why is this necessary??
-                    for j, test_batch in enumerate(test_loader):
-                        print("\tbatch loaded, {} of {}".format(j + 1, len(test_loader)))
-                        mel, audio = test_batch
-                        print("\tbatch done, {} of {}: {} {}".format(j + 1, len(test_loader), mel.size(), audio.size()))
-
                     model.eval()
                     val_loss = 0.0
                     for j, test_batch in enumerate(test_loader):
