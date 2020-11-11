@@ -67,6 +67,8 @@ def validate(model, criterion, testset, iteration, batch_size, num_gpus, logger)
     with torch.no_grad():
         print("validation {}:".format(iteration))
 
+        batch_size = min(batch_size, len(testset) / num_gpus)
+
         test_sampler = DistributedSampler(testset) if num_gpus > 1 else None
         test_loader = DataLoader(testset,
                                  num_workers=1,
