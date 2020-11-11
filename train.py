@@ -61,7 +61,7 @@ def save_checkpoint(model, optimizer, learning_rate, iteration, filepath):
                 'learning_rate': learning_rate}, filepath)
 
 
-def validate(model, criterion, testset, iteration, batch_size, num_gpus, logger, rank, with_tensorboard):
+def validate(model, criterion, testset, iteration, batch_size, num_gpus, logger):
     test_sampler = DistributedSampler(testset) if num_gpus > 1 else None
     test_loader = DataLoader(testset,
                              num_workers=1,
@@ -99,7 +99,7 @@ def validate(model, criterion, testset, iteration, batch_size, num_gpus, logger,
         model.train()
 
         print("val loss: {}:\t{:.9f}".format(iteration, val_loss))
-        if with_tensorboard and rank == 0:
+        if logger:
             logger.add_scalar('test_loss', val_loss, iteration)
 
 
@@ -177,6 +177,8 @@ def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
     if with_tensorboard and rank == 0:
         from tensorboardX import SummaryWriter
         logger = SummaryWriter(os.path.join(output_directory, 'logs'))
+    else:
+        logger = None
 
     model.train()
     epoch_offset = max(0, int(iteration / len(train_loader)))
@@ -218,7 +220,7 @@ def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
 
             if testset and not is_overflow and (iteration % iters_per_checkpoint == 0):
                 if testset:
-                    validate(model, criterion, testset, iteration, batch_size, num_gpus, logger, rank, with_tensorboard)
+                    validate(model, criterion, testset, iteration, batch_size, num_gpus, logger)
 
                 if rank == 0:
                     checkpoint_path = "{}/waveglow_{}".format(output_directory, iteration)
