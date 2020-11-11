@@ -37,7 +37,6 @@ import soundfile as sf
 sys.path.insert(0, 'tacotron2')
 from tacotron2.layers import TacotronSTFT
 
-MAX_WAV_VALUE = 32768.0
 
 def files_to_list(filename):
     """
@@ -75,7 +74,6 @@ class Mel2Samp(torch.utils.data.Dataset):
     """
     def __init__(self, training_files, segment_length, filter_length,
                  hop_length, win_length, sampling_rate, mel_fmin, mel_fmax, debug=False):
-        self.audio_files = files_to_list(training_files)
         self.stft = TacotronSTFT(filter_length=filter_length,
                                  hop_length=hop_length,
                                  win_length=win_length,
@@ -84,6 +82,15 @@ class Mel2Samp(torch.utils.data.Dataset):
         self.segment_length = segment_length
         self.sampling_rate = sampling_rate
         self.debug = debug
+
+        valid_files = []
+        paths = files_to_list(training_files)
+        for path in paths:
+            dur = duration(path)
+            if dur >= self.segment_length:
+                valid_files.append(path)
+        self.audio_files = valid_files
+
 
     def get_mel(self, audio):
         audio = audio.unsqueeze(0)
