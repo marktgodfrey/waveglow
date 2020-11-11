@@ -98,7 +98,7 @@ def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
                         data_config['sampling_rate'],
                         data_config['mel_fmin'],
                         data_config['mel_fmax'],
-                        debug=True)
+                        debug=False)
 
     # =====START: ADDED FOR DISTRIBUTED======
     train_sampler = DistributedSampler(trainset) if num_gpus > 1 else None
@@ -130,6 +130,7 @@ def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
         for i, batch in enumerate(train_loader):
             model.zero_grad()
 
+            print("train batch loaded, {} ({} of {})".format(iteration, i, len(train_loader)))
             mel, audio = batch
             mel = torch.autograd.Variable(mel.cuda())
             audio = torch.autograd.Variable(audio.cuda())
@@ -154,7 +155,8 @@ def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
 
             optimizer.step()
 
-            print("{}:\t{:.9f}".format(iteration, reduced_loss))
+            print("train batch done, {} ({} of {}): {:.9f}".format(iteration, i, len(train_loader), reduced_loss))
+
             if with_tensorboard and rank == 0:
                 logger.add_scalar('training_loss', reduced_loss, i + len(train_loader) * epoch)
 
@@ -189,7 +191,7 @@ def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
                     model.eval()
                     val_loss = 0.0
                     for j, test_batch in enumerate(test_loader):
-                        print("\tbatch loaded, {} of {}".format(j+1, len(test_loader)))
+                        print("\tval batch loaded, {} of {}".format(j+1, len(test_loader)))
                         mel, audio = test_batch
                         mel = torch.autograd.Variable(mel.cuda())
                         audio = torch.autograd.Variable(audio.cuda())
@@ -201,7 +203,7 @@ def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
                         else:
                             reduced_val_loss = loss.item()
                         val_loss += reduced_val_loss
-                        print("\tbatch done, {} of {}: {:.9f}".format(j+1, len(test_loader), reduced_val_loss))
+                        print("\tval batch done, {} of {}: {:.9f}".format(j+1, len(test_loader), reduced_val_loss))
                     val_loss = val_loss / (j + 1)
                     model.train()
 
