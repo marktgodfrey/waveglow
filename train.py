@@ -159,54 +159,55 @@ def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
 
             if not is_overflow and (iteration % iters_per_checkpoint == 0):
 
-                testset = Mel2Samp(data_config['testing_files'],
-                                   data_config['segment_length'],
-                                   data_config['filter_length'],
-                                   data_config['hop_length'],
-                                   data_config['win_length'],
-                                   data_config['sampling_rate'],
-                                   data_config['mel_fmin'],
-                                   data_config['mel_fmax'],
-                                   debug=True)
-                test_sampler = DistributedSampler(testset) if num_gpus > 1 else None
-                test_loader = DataLoader(testset,
-                                         num_workers=1,
-                                         shuffle=False,
-                                         sampler=test_sampler,
-                                         batch_size=batch_size,
-                                         pin_memory=False,
-                                         drop_last=True)
-
-                # why is this necessary??
-                for j, test_batch in enumerate(test_loader):
-                    print("\tbatch loaded, {} of {}".format(j + 1, len(test_loader)))
-                    mel, audio = test_batch
-                    print("\tbatch done, {} of {}: {} {}".format(j + 1, len(test_loader), mel.size(), audio.size()))
-
-                with torch.no_grad():
-                    print("validation {}:".format(iteration))
-                    model.eval()
-                    val_loss = 0.0
-                    for j, test_batch in enumerate(test_loader):
-                        print("\tbatch loaded, {} of {}".format(j+1, len(test_loader)))
-                        mel, audio = test_batch
-                        mel = torch.autograd.Variable(mel.cuda())
-                        audio = torch.autograd.Variable(audio.cuda())
-                        outputs = model((mel, audio))
-
-                        loss = criterion(outputs)
-                        if num_gpus > 1:
-                            reduced_val_loss = reduce_tensor(loss.data, num_gpus).item()
-                        else:
-                            reduced_val_loss = loss.item()
-                        val_loss += reduced_val_loss
-                        print("\tbatch done, {} of {}: {:.9f}".format(j+1, len(test_loader), reduced_val_loss))
-                    val_loss = val_loss / (j + 1)
-                    model.train()
-
-                    print("val loss: {}:\t{:.9f}".format(iteration, val_loss))
-                    if with_tensorboard and rank == 0:
-                        logger.add_scalar('test_loss', val_loss, i + len(train_loader) * epoch)
+                # giving up completely
+                # testset = Mel2Samp(data_config['testing_files'],
+                #                    data_config['segment_length'],
+                #                    data_config['filter_length'],
+                #                    data_config['hop_length'],
+                #                    data_config['win_length'],
+                #                    data_config['sampling_rate'],
+                #                    data_config['mel_fmin'],
+                #                    data_config['mel_fmax'],
+                #                    debug=True)
+                # test_sampler = DistributedSampler(testset) if num_gpus > 1 else None
+                # test_loader = DataLoader(testset,
+                #                          num_workers=1,
+                #                          shuffle=False,
+                #                          sampler=test_sampler,
+                #                          batch_size=batch_size,
+                #                          pin_memory=False,
+                #                          drop_last=True)
+                #
+                # # why is this necessary??
+                # for j, test_batch in enumerate(test_loader):
+                #     print("\twtfbatch loaded, {} of {}".format(j + 1, len(test_loader)))
+                #     mel, audio = test_batch
+                #     print("\twtfbatch done, {} of {}: {} {}".format(j + 1, len(test_loader), mel.size(), audio.size()))
+                #
+                # with torch.no_grad():
+                #     print("validation {}:".format(iteration))
+                #     model.eval()
+                #     val_loss = 0.0
+                #     for j, test_batch in enumerate(test_loader):
+                #         print("\tbatch loaded, {} of {}".format(j+1, len(test_loader)))
+                #         mel, audio = test_batch
+                #         mel = torch.autograd.Variable(mel.cuda())
+                #         audio = torch.autograd.Variable(audio.cuda())
+                #         outputs = model((mel, audio))
+                #
+                #         loss = criterion(outputs)
+                #         if num_gpus > 1:
+                #             reduced_val_loss = reduce_tensor(loss.data, num_gpus).item()
+                #         else:
+                #             reduced_val_loss = loss.item()
+                #         val_loss += reduced_val_loss
+                #         print("\tbatch done, {} of {}: {:.9f}".format(j+1, len(test_loader), reduced_val_loss))
+                #     val_loss = val_loss / (j + 1)
+                #     model.train()
+                #
+                #     print("val loss: {}:\t{:.9f}".format(iteration, val_loss))
+                #     if with_tensorboard and rank == 0:
+                #         logger.add_scalar('test_loss', val_loss, i + len(train_loader) * epoch)
 
                 if rank == 0:
                     checkpoint_path = "{}/waveglow_{}".format(output_directory, iteration)
