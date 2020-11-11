@@ -89,7 +89,7 @@ class Mel2Samp(torch.utils.data.Dataset):
         filename = self.audio_files[index]
 
         if self.debug:
-            print('Mel2Samp: %d %s' % (index, filename))
+            print('Mel2Samp load: %d %s' % (index, filename))
 
         audio, sampling_rate = load_wav_to_torch(filename)
         if sampling_rate != self.sampling_rate:
@@ -106,6 +106,9 @@ class Mel2Samp(torch.utils.data.Dataset):
 
         mel = self.get_mel(audio)
         audio = audio / MAX_WAV_VALUE
+
+        if self.debug:
+            print('Mel2Samp done: %d %s' % (index, filename))
 
         return (mel, audio)
 

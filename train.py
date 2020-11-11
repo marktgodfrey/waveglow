@@ -176,6 +176,7 @@ def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
                     model.eval()
                     val_loss = 0.0
                     for j, test_batch in enumerate(test_loader):
+                        print("\tbatch loaded, {} of {}".format(j+1, len(test_loader)))
                         mel, audio = test_batch
                         mel = torch.autograd.Variable(mel.cuda())
                         audio = torch.autograd.Variable(audio.cuda())
