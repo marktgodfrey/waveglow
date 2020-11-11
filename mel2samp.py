@@ -31,7 +31,7 @@ import json
 import torch
 import torch.utils.data
 import sys
-from scipy.io.wavfile import read
+import soundfile as sf
 
 # We're using the audio processing from TacoTron2 to make sure it matches
 sys.path.insert(0, 'tacotron2')
@@ -49,12 +49,23 @@ def files_to_list(filename):
     files = [f.rstrip() for f in files]
     return files
 
-def load_wav_to_torch(full_path):
+
+def duration(audio_path):
+    info = sf.info(audio_path)
+    return info.frames
+
+
+def sample_rate(audio_path):
+    info = sf.info(audio_path)
+    return info.samplerate
+
+
+def load_wav_to_torch(audio_path, start_sample, end_sample):
     """
     Loads wavdata into torch array
     """
-    sampling_rate, data = read(full_path)
-    return torch.from_numpy(data).float(), sampling_rate
+    audio_data, _ = sf.read(audio_path, start=start_sample, stop=end_sample)
+    return torch.from_numpy(audio_data).float()
 
 
 class Mel2Samp(torch.utils.data.Dataset):
@@ -65,8 +76,6 @@ class Mel2Samp(torch.utils.data.Dataset):
     def __init__(self, training_files, segment_length, filter_length,
                  hop_length, win_length, sampling_rate, mel_fmin, mel_fmax, debug=False):
         self.audio_files = files_to_list(training_files)
-        # random.seed(1234)
-        # random.shuffle(self.audio_files)
         self.stft = TacotronSTFT(filter_length=filter_length,
                                  hop_length=hop_length,
                                  win_length=win_length,
@@ -88,21 +97,24 @@ class Mel2Samp(torch.utils.data.Dataset):
         # Read audio
         filename = self.audio_files[index]
 
-        if self.debug:
-            print('Mel2Samp load: %d %s' % (index, filename))
-
-        audio, sampling_rate = load_wav_to_torch(filename)
+        sampling_rate = sample_rate(filename)
         if sampling_rate != self.sampling_rate:
             raise ValueError("{} SR doesn't match target {} SR".format(
                 sampling_rate, self.sampling_rate))
 
+        if self.debug:
+            print('Mel2Samp load: %d %s' % (index, filename))
+
+        dur = duration(filename)
+
         # Take segment
-        if audio.size(0) >= self.segment_length:
-            max_audio_start = audio.size(0) - self.segment_length
+        if dur >= self.segment_length:
+            max_audio_start = dur - self.segment_length
             audio_start = random.randint(0, max_audio_start)
-            audio = audio[audio_start:audio_start+self.segment_length]
+            audio = load_wav_to_torch(filename, start_sample=audio_start, end_sample=(audio_start + self.segment_length))
         else:
-            audio = torch.nn.functional.pad(audio, (0, self.segment_length - audio.size(0)), 'constant').data
+            audio = load_wav_to_torch(filename, start_sample=0, end_sample=dur)
+            audio = torch.nn.functional.pad(audio, (0, self.segment_length - dur), 'constant').data
 
         mel = self.get_mel(audio)
         audio = audio / MAX_WAV_VALUE
