@@ -86,10 +86,9 @@ class Mel2Samp(torch.utils.data.Dataset):
         self.debug = debug
 
     def get_mel(self, audio):
-        audio_norm = audio / MAX_WAV_VALUE
-        audio_norm = audio_norm.unsqueeze(0)
-        audio_norm = torch.autograd.Variable(audio_norm, requires_grad=False)
-        melspec = self.stft.mel_spectrogram(audio_norm)
+        audio = audio.unsqueeze(0)
+        audio = torch.autograd.Variable(audio, requires_grad=False)
+        melspec = self.stft.mel_spectrogram(audio)
         melspec = torch.squeeze(melspec, 0)
         return melspec
 
@@ -117,7 +116,6 @@ class Mel2Samp(torch.utils.data.Dataset):
             audio = torch.nn.functional.pad(audio, (0, self.segment_length - dur), 'constant').data
 
         mel = self.get_mel(audio)
-        audio = audio / MAX_WAV_VALUE
 
         if self.debug:
             print('Mel2Samp done: %d %s' % (index, filename))
