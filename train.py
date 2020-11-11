@@ -108,7 +108,8 @@ def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
                               sampler=train_sampler,
                               batch_size=batch_size,
                               pin_memory=False,
-                              drop_last=True)
+                              drop_last=True,
+                              debug=True)
 
     # Get shared output_directory ready
     if rank == 0:
