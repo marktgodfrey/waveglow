@@ -87,8 +87,7 @@ def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
     # Load checkpoint if one exists
     iteration = 0
     if checkpoint_path != "":
-        model, optimizer, iteration = load_checkpoint(checkpoint_path, model,
-                                                      optimizer)
+        model, optimizer, iteration = load_checkpoint(checkpoint_path, model, optimizer)
         iteration += 1  # next iteration is iteration + 1
 
     trainset = Mel2Samp(data_config['training_files'],
@@ -175,6 +174,11 @@ def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
             print("{}:\t{:.9f}".format(iteration, reduced_loss))
             if with_tensorboard and rank == 0:
                 logger.add_scalar('training_loss', reduced_loss, i + len(train_loader) * epoch)
+
+            for j, test_batch in enumerate(test_loader):
+                print("\tbatch loaded, {} of {}".format(j + 1, len(test_loader)))
+                mel, audio = test_batch
+                print("\tbatch done, {} of {}: {} {}".format(j + 1, len(test_loader), mel.size(), audio.size()))
 
             if not is_overflow and (iteration % iters_per_checkpoint == 0):
                 with torch.no_grad():
