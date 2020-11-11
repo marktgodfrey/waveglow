@@ -117,7 +117,8 @@ def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
                        data_config['win_length'],
                        data_config['sampling_rate'],
                        data_config['mel_fmin'],
-                       data_config['mel_fmax'])
+                       data_config['mel_fmax'],
+                       debug=True)
     test_sampler = DistributedSampler(testset) if num_gpus > 1 else None
     test_loader = DataLoader(testset,
                              num_workers=1,

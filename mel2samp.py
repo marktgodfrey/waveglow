@@ -63,7 +63,7 @@ class Mel2Samp(torch.utils.data.Dataset):
     spectrogram, audio pair.
     """
     def __init__(self, training_files, segment_length, filter_length,
-                 hop_length, win_length, sampling_rate, mel_fmin, mel_fmax):
+                 hop_length, win_length, sampling_rate, mel_fmin, mel_fmax, debug=False):
         self.audio_files = files_to_list(training_files)
         random.seed(1234)
         random.shuffle(self.audio_files)
@@ -74,6 +74,7 @@ class Mel2Samp(torch.utils.data.Dataset):
                                  mel_fmin=mel_fmin, mel_fmax=mel_fmax)
         self.segment_length = segment_length
         self.sampling_rate = sampling_rate
+        self.debug = debug
 
     def get_mel(self, audio):
         audio_norm = audio / MAX_WAV_VALUE
@@ -86,6 +87,10 @@ class Mel2Samp(torch.utils.data.Dataset):
     def __getitem__(self, index):
         # Read audio
         filename = self.audio_files[index]
+
+        if self.debug:
+            print('Mel2Samp: %d %s' % (index, filename))
+
         audio, sampling_rate = load_wav_to_torch(filename)
         if sampling_rate != self.sampling_rate:
             raise ValueError("{} SR doesn't match target {} SR".format(
