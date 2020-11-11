@@ -27,6 +27,7 @@
 import argparse
 import json
 import os
+import time
 import math
 import torch
 
@@ -101,7 +102,6 @@ def validate(model, criterion, testset, iteration, batch_size, num_gpus, logger)
         if logger:
             logger.add_scalar('test_loss', val_loss, iteration)
     model.train()
-
 
 
 def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
@@ -187,6 +187,8 @@ def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
     for epoch in range(epoch_offset, epochs):
         print("Epoch: {}".format(epoch))
         for i, batch in enumerate(train_loader):
+            start = time.perf_counter()
+
             model.zero_grad()
 
             print("train batch loaded, {} ({} of {})".format(iteration, i, len(train_loader)))
@@ -214,10 +216,13 @@ def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
 
             optimizer.step()
 
-            print("train batch done, {} ({} of {}): {:.9f}".format(iteration, i, len(train_loader), reduced_loss))
+            duration = time.perf_counter() - start
+
+            print("train batch done, {} ({} of {}): {:.9f} (took {:.2f})".format(iteration, i, len(train_loader), reduced_loss, duration))
 
             if logger:
                 logger.add_scalar('training_loss', reduced_loss, i + len(train_loader) * epoch)
+                logger.add_scalar('duration', duration, i + len(train_loader) * epoch)
 
             if testset and not is_overflow and (iteration % iters_per_checkpoint == 0):
                 if testset:
