@@ -102,11 +102,30 @@ def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
     # =====START: ADDED FOR DISTRIBUTED======
     train_sampler = DistributedSampler(trainset) if num_gpus > 1 else None
     # =====END:   ADDED FOR DISTRIBUTED======
-    train_loader = DataLoader(trainset, num_workers=1, shuffle=False,
+    train_loader = DataLoader(trainset,
+                              num_workers=1,
+                              shuffle=False,
                               sampler=train_sampler,
                               batch_size=batch_size,
                               pin_memory=False,
                               drop_last=True)
+
+    testset = Mel2Samp(data_config['testing_files'],
+                       data_config['segment_length'],
+                       data_config['filter_length'],
+                       data_config['hop_length'],
+                       data_config['win_length'],
+                       data_config['sampling_rate'],
+                       data_config['mel_fmin'],
+                       data_config['mel_fmax'])
+    test_sampler = DistributedSampler(testset) if num_gpus > 1 else None
+    test_loader = DataLoader(testset,
+                             num_workers=1,
+                             shuffle=False,
+                             sampler=test_sampler,
+                             batch_size=batch_size,
+                             pin_memory=False,
+                             drop_last=True)
 
     # Get shared output_directory ready
     if rank == 0:
@@ -153,23 +172,6 @@ def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
             if iteration % iters_per_checkpoint == 0 and rank == 0:
                 with torch.no_grad():
                     print("validation {}:".format(iteration))
-                    testset = Mel2Samp(data_config['testing_files'],
-                                       data_config['segment_length'],
-                                       data_config['filter_length'],
-                                       data_config['hop_length'],
-                                       data_config['win_length'],
-                                       data_config['sampling_rate'],
-                                       data_config['mel_fmin'],
-                                       data_config['mel_fmax'])
-                    test_sampler = DistributedSampler(testset) if num_gpus > 1 else None
-                    test_loader = DataLoader(testset,
-                                             num_workers=1,
-                                             shuffle=False,
-                                             sampler=test_sampler,
-                                             batch_size=batch_size,
-                                             pin_memory=False,
-                                             drop_last=True)
-
                     model.eval()
                     val_loss = 0.0
                     for j, test_batch in enumerate(test_loader):
@@ -184,6 +186,7 @@ def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
                         else:
                             reduced_val_loss = loss.item()
                         val_loss += reduced_val_loss
+                        print("\t {}: {:.9f}".format(j, reduced_val_loss))
                     val_loss = val_loss / (j + 1)
                     model.train()
 
