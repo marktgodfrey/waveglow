@@ -29,6 +29,8 @@ import json
 import os
 import time
 import math
+import re
+import glob
 import torch
 
 #=====START: ADDED FOR DISTRIBUTED======
@@ -40,6 +42,35 @@ from torch.utils.data import DataLoader
 from glow import WaveGlow, WaveGlowLoss
 from mel2samp import Mel2Samp
 
+def rotate_checkpoints(output_directory, save_total_limit=10, use_mtime=False):
+    if not save_total_limit:
+        return
+    if save_total_limit <= 0:
+        return
+
+    # Check if we should delete older checkpoint(s)
+    glob_checkpoints = glob.glob(os.path.join(output_directory, 'waveglow_*'))
+    if len(glob_checkpoints) <= save_total_limit:
+        return
+
+    ordering_and_checkpoint_path = []
+    for path in glob_checkpoints:
+        if use_mtime:
+            ordering_and_checkpoint_path.append((os.path.getmtime(path), path))
+        else:
+            regex_match = re.match('.*waveglow_([0-9]+)', path)
+            if regex_match and regex_match.groups():
+                ordering_and_checkpoint_path.append((int(regex_match.groups()[0]), path))
+
+    checkpoints_sorted = sorted(ordering_and_checkpoint_path)
+    checkpoints_sorted = [checkpoint[1] for checkpoint in checkpoints_sorted]
+    number_of_checkpoints_to_delete = max(0, len(checkpoints_sorted) - save_total_limit)
+    checkpoints_to_be_deleted = checkpoints_sorted[:number_of_checkpoints_to_delete]
+    for checkpoint in checkpoints_to_be_deleted:
+        print('Deleting older checkpoint [{}] due to save_total_limit'.format(checkpoint))
+        os.remove(checkpoint)
+
+
 def load_checkpoint(checkpoint_path, model, optimizer):
     assert os.path.isfile(checkpoint_path)
     checkpoint_dict = torch.load(checkpoint_path, map_location='cpu')
@@ -47,9 +78,9 @@ def load_checkpoint(checkpoint_path, model, optimizer):
     optimizer.load_state_dict(checkpoint_dict['optimizer'])
     model_for_loading = checkpoint_dict['model']
     model.load_state_dict(model_for_loading.state_dict())
-    print("Loaded checkpoint '{}' (iteration {})" .format(
-          checkpoint_path, iteration))
+    print("Loaded checkpoint '{}' (iteration {})" .format(checkpoint_path, iteration))
     return model, optimizer, iteration
+
 
 def save_checkpoint(model, optimizer, learning_rate, iteration, filepath):
     print("Saving model and optimizer state at iteration {} to {}".format(
@@ -231,6 +262,7 @@ def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
                     validate(model, criterion, testset, iteration, batch_size, num_gpus, logger)
 
                 if rank == 0:
+                    rotate_checkpoints(output_directory)
                     checkpoint_path = "{}/waveglow_{}".format(output_directory, iteration)
                     save_checkpoint(model, optimizer, learning_rate, iteration, checkpoint_path)
 
